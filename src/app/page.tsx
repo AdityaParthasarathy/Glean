@@ -4,7 +4,12 @@ const CARDS = [
   {
     href: "/retailer",
     title: "Retailer dashboard",
-    desc: "List inventory, see freshness scores and suggested markdowns, route surplus to NGOs or consumers.",
+    desc: "List inventory, see freshness scores and suggested markdowns, sell directly to consumers.",
+  },
+  {
+    href: "/glean",
+    title: "Glean dispatch console",
+    desc: "The middleman: matches listed surplus to NGOs and owns pickup and delivery once accepted.",
   },
   {
     href: "/ngo",

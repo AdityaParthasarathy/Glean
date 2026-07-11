@@ -5,16 +5,18 @@ import { buildImpactLogEntry } from "@/lib/engines/impact";
 import type { MatchStatus } from "@/lib/types";
 
 const ALLOWED_TRANSITIONS: Record<MatchStatus, MatchStatus[]> = {
-  Matched: ["Picked up", "Declined"],
+  Matched: ["Accepted", "Declined"],
+  Accepted: ["Picked up"],
   "Picked up": ["Delivered"],
   Delivered: [],
   Declined: [],
 };
 
-// Advances a match through Listed -> Matched -> Picked up -> Delivered, or
-// lets the NGO decline. Declining returns the batch to the open pool
-// instead of leaving it stuck — it can be sold to a consumer or re-matched,
-// never treated as this NGO's "reject pile".
+// Matched -> Accepted/Declined is the NGO's call (accept or decline the
+// proposed transfer). Accepted -> Picked up -> Delivered is Glean's job —
+// Glean owns logistics once an NGO has said yes. Declining returns the
+// batch to the open pool instead of leaving it stuck — it can be sold to a
+// consumer or re-matched, never treated as this NGO's "reject pile".
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }

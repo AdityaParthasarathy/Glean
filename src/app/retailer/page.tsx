@@ -17,7 +17,6 @@ export default function RetailerPage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [matchNotice, setMatchNotice] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     category: "produce" as FoodCategory,
     itemName: "",
@@ -47,6 +46,7 @@ export default function RetailerPage() {
 
   useEffect(() => {
     if (!retailerId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on retailer switch
     setLoading(true);
     refresh(retailerId).finally(() => setLoading(false));
   }, [retailerId, refresh]);
@@ -67,26 +67,6 @@ export default function RetailerPage() {
     refresh(retailerId);
   }
 
-  async function handleFindMatch(batchId: string) {
-    setBusyId(batchId);
-    try {
-      const result = await api.findMatch(batchId);
-      if ("candidate" in result && result.candidate === null) {
-        setMatchNotice((m) => ({ ...m, [batchId]: result.reason }));
-      } else if ("ngo" in result) {
-        setMatchNotice((m) => ({
-          ...m,
-          [batchId]: `Matched with ${result.ngo.name} (${result.distanceKm} km away)`,
-        }));
-      }
-      await refresh(retailerId);
-    } catch (err) {
-      setMatchNotice((m) => ({ ...m, [batchId]: (err as Error).message }));
-    } finally {
-      setBusyId(null);
-    }
-  }
-
   async function handleSell(batchId: string) {
     setBusyId(batchId);
     try {
@@ -103,7 +83,9 @@ export default function RetailerPage() {
         <div>
           <h1 className="text-2xl font-bold">Retailer dashboard</h1>
           <p className="text-sm text-zinc-500">
-            List inventory, see freshness scores and suggested markdowns, and route surplus.
+            List inventory and see freshness scores and suggested markdowns. Listed items are
+            automatically visible to Glean for NGO matching — you can also sell directly to
+            consumers.
           </p>
         </div>
         <select
@@ -236,13 +218,10 @@ export default function RetailerPage() {
 
               {b.status === "Listed" && b.isSafe && (
                 <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <button
-                    onClick={() => handleFindMatch(b.id)}
-                    disabled={busyId === b.id}
-                    className="rounded-lg border border-emerald-600 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
-                  >
-                    Find NGO match
-                  </button>
+                  <span className="text-xs text-zinc-500">
+                    Available for transfer — Glean will route this to an NGO or you can sell it
+                    directly.
+                  </span>
                   <button
                     onClick={() => handleSell(b.id)}
                     disabled={busyId === b.id}
@@ -250,23 +229,25 @@ export default function RetailerPage() {
                   >
                     Mark sold to consumer
                   </button>
-                  {matchNotice[b.id] && (
-                    <span className="text-xs text-zinc-500">{matchNotice[b.id]}</span>
-                  )}
                 </div>
               )}
 
-              {(b.status === "Matched" || b.status === "Picked up") && (
+              {b.status !== "Listed" && b.status !== "Composted" && (
                 <p className="mt-3 text-xs text-zinc-500">
-                  {b.status === "Matched" ? "Awaiting pickup" : "Picked up, awaiting delivery"}{" "}
-                  by{" "}
-                  {ngos.find(
-                    (n) =>
-                      n.id ===
-                      matches.find((m) => m.batchId === b.id && m.status !== "Declined")
-                        ?.ngoId
-                  )?.name ?? "matched NGO"}{" "}
-                  — see the NGO view to advance status.
+                  {(() => {
+                    const match = matches.find(
+                      (m) => m.batchId === b.id && m.status !== "Declined"
+                    );
+                    const ngoName =
+                      ngos.find((n) => n.id === match?.ngoId)?.name ?? "matched NGO";
+                    const STATUS_LABEL: Record<string, string> = {
+                      Matched: `Proposed to ${ngoName} — awaiting their response.`,
+                      Accepted: `Accepted by ${ngoName} — awaiting pickup by Glean.`,
+                      "Picked up": `Picked up by Glean, in transit to ${ngoName}.`,
+                      Delivered: `Delivered to ${ngoName}.`,
+                    };
+                    return match ? STATUS_LABEL[match.status] : null;
+                  })()}
                 </p>
               )}
             </div>

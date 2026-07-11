@@ -15,7 +15,12 @@ export type BatchStatus =
   | "Delivered"
   | "Composted";
 
-export type MatchStatus = "Matched" | "Picked up" | "Delivered" | "Declined";
+export type MatchStatus =
+  | "Matched"
+  | "Accepted"
+  | "Picked up"
+  | "Delivered"
+  | "Declined";
 
 export interface Retailer {
   id: string;

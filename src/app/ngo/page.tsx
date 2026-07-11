@@ -93,7 +93,8 @@ export default function NgoPage() {
   }
 
   const incoming = matches.filter((m) => m.status === "Matched");
-  const inProgress = matches.filter((m) => m.status === "Picked up");
+  const accepted = matches.filter((m) => m.status === "Accepted");
+  const inTransit = matches.filter((m) => m.status === "Picked up");
   const delivered = matches.filter((m) => m.status === "Delivered");
 
   return (
@@ -102,8 +103,8 @@ export default function NgoPage() {
         <div>
           <h1 className="text-2xl font-bold">NGO surplus feed</h1>
           <p className="text-sm text-zinc-500">
-            You choose what to accept — set your own thresholds below. Demo data uses fictional
-            NGO names.
+            You choose what to accept — set your own thresholds below. Glean handles pickup and
+            delivery once you accept. Demo data uses fictional NGO names.
           </p>
         </div>
         <select
@@ -187,7 +188,7 @@ export default function NgoPage() {
               <BatchInfo batch={m.batch} distanceKm={m.distanceKm} />
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handleAdvance(m.id, "Picked up")}
+                  onClick={() => handleAdvance(m.id, "Accepted")}
                   disabled={busyId === m.id}
                   className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
                 >
@@ -206,20 +207,27 @@ export default function NgoPage() {
         )}
       </Section>
 
-      <Section title="Picked up — mark delivered">
-        {inProgress.length === 0 ? (
-          <Empty text="Nothing in transit." />
+      <Section title="Accepted — awaiting pickup by Glean">
+        {accepted.length === 0 ? (
+          <Empty text="Nothing accepted yet." />
         ) : (
-          inProgress.map((m) => (
+          accepted.map((m) => (
             <MatchRow key={m.id}>
               <BatchInfo batch={m.batch} distanceKm={m.distanceKm} />
-              <button
-                onClick={() => handleAdvance(m.id, "Delivered")}
-                disabled={busyId === m.id}
-                className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
-              >
-                Mark delivered
-              </button>
+              <span className="text-xs text-zinc-500">Glean will arrange pickup</span>
+            </MatchRow>
+          ))
+        )}
+      </Section>
+
+      <Section title="In transit">
+        {inTransit.length === 0 ? (
+          <Empty text="Nothing in transit." />
+        ) : (
+          inTransit.map((m) => (
+            <MatchRow key={m.id}>
+              <BatchInfo batch={m.batch} distanceKm={m.distanceKm} />
+              <span className="text-xs text-zinc-500">Picked up by Glean</span>
             </MatchRow>
           ))
         )}
