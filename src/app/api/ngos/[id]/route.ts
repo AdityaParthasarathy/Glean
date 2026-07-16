@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { readDB, updateDB } from "@/lib/db";
+import { getSession, unauthorized } from "@/lib/session";
 
 export async function GET(
   _req: Request,
@@ -19,6 +20,12 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+
+  const session = await getSession();
+  if (!session || session.role !== "ngo" || session.ngoId !== id) {
+    return unauthorized("Only the NGO's own logged-in account can edit its preferences.");
+  }
+
   const body = await req.json();
 
   const updated = updateDB((db) => {

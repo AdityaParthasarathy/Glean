@@ -1,4 +1,12 @@
-import type { FoodBatch, Match, NGO, Retailer } from "./types";
+import type { FoodBatch, Match, NGO, Retailer, Role } from "./types";
+
+export interface SessionInfo {
+  accountId: string;
+  role: Role;
+  retailerId: string | null;
+  ngoId: string | null;
+  displayName: string;
+}
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -9,6 +17,18 @@ async function json<T>(res: Response): Promise<T> {
 }
 
 export const api = {
+  getMe: () =>
+    fetch("/api/auth/me").then((r) => json<{ session: SessionInfo | null }>(r)),
+
+  login: (username: string, password: string) =>
+    fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    }).then((r) => json<{ role: Role; displayName: string; redirectTo: string }>(r)),
+
+  logout: () => fetch("/api/auth/logout", { method: "POST" }),
+
   getRetailers: () => fetch("/api/retailers").then((r) => json<Retailer[]>(r)),
 
   getBatches: (retailerId?: string) =>
@@ -16,8 +36,9 @@ export const api = {
       (r) => json<FoodBatch[]>(r)
     ),
 
+  // retailerId is derived server-side from the logged-in session, not from
+  // this input — kept out of the type to make that explicit.
   createBatch: (input: {
-    retailerId: string;
     category: string;
     itemName: string;
     quantity: number;
@@ -39,6 +60,8 @@ export const api = {
     }).then((r) => json<FoodBatch>(r)),
 
   getNGOs: () => fetch("/api/ngos").then((r) => json<NGO[]>(r)),
+
+  getNGO: (id: string) => fetch(`/api/ngos/${id}`).then((r) => json<NGO>(r)),
 
   updateNGO: (
     id: string,

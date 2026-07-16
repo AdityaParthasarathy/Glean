@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { api } from "@/lib/apiClient";
-import type { FoodBatch, FoodCategory, Match, NGO, Retailer } from "@/lib/types";
+import { api, type SessionInfo } from "@/lib/apiClient";
+import type { FoodBatch, FoodCategory, Match, NGO } from "@/lib/types";
 import { CATEGORIES, CATEGORY_LABELS, formatUsd } from "@/lib/format";
 import FreshnessBadge from "@/components/FreshnessBadge";
 import StatusStepper from "@/components/StatusStepper";
@@ -10,8 +10,7 @@ import StatusStepper from "@/components/StatusStepper";
 const EXPIRY_CATEGORIES: FoodCategory[] = ["dairy", "packaged", "frozen"];
 
 export default function RetailerPage() {
-  const [retailers, setRetailers] = useState<Retailer[]>([]);
-  const [retailerId, setRetailerId] = useState<string>("");
+  const [session, setSession] = useState<SessionInfo | null>(null);
   const [batches, setBatches] = useState<FoodBatch[]>([]);
   const [ngos, setNgos] = useState<NGO[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -38,24 +37,20 @@ export default function RetailerPage() {
   }, []);
 
   useEffect(() => {
-    api.getRetailers().then((rs) => {
-      setRetailers(rs);
-      if (rs.length > 0) setRetailerId(rs[0].id);
-    });
+    api.getMe().then(({ session: s }) => setSession(s));
   }, []);
 
   useEffect(() => {
-    if (!retailerId) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on retailer switch
+    if (!session?.retailerId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on session load
     setLoading(true);
-    refresh(retailerId).finally(() => setLoading(false));
-  }, [retailerId, refresh]);
+    refresh(session.retailerId).finally(() => setLoading(false));
+  }, [session, refresh]);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    if (!retailerId) return;
+    if (!session?.retailerId) return;
     await api.createBatch({
-      retailerId,
       category: form.category,
       itemName: form.itemName || `${CATEGORY_LABELS[form.category]} batch`,
       quantity: Number(form.quantity),
@@ -64,14 +59,15 @@ export default function RetailerPage() {
       expiryDate: form.expiryDate ? new Date(form.expiryDate).toISOString() : null,
     });
     setForm((f) => ({ ...f, itemName: "" }));
-    refresh(retailerId);
+    refresh(session.retailerId);
   }
 
   async function handleSell(batchId: string) {
+    if (!session?.retailerId) return;
     setBusyId(batchId);
     try {
       await api.sellBatch(batchId);
-      await refresh(retailerId);
+      await refresh(session.retailerId);
     } finally {
       setBusyId(null);
     }
@@ -79,26 +75,13 @@ export default function RetailerPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Retailer dashboard</h1>
-          <p className="text-sm text-zinc-500">
-            List inventory and see freshness scores and suggested markdowns. Listed items are
-            automatically visible to Glean for NGO matching — you can also sell directly to
-            consumers.
-          </p>
-        </div>
-        <select
-          value={retailerId}
-          onChange={(e) => setRetailerId(e.target.value)}
-          className="rounded-lg border border-black/10 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900"
-        >
-          {retailers.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
-            </option>
-          ))}
-        </select>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold">Retailer dashboard</h1>
+        <p className="text-sm text-zinc-500">
+          {session ? `Logged in as ${session.displayName}. ` : ""}List inventory and see
+          freshness scores and suggested markdowns. Listed items are automatically visible to
+          Glean for NGO matching — you can also sell directly to consumers.
+        </p>
       </div>
 
       <form
@@ -167,7 +150,7 @@ export default function RetailerPage() {
         <div className="col-span-2 flex items-end sm:col-span-1">
           <button
             type="submit"
-            disabled={!retailerId}
+            disabled={!session?.retailerId}
             className="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
           >
             Add to inventory

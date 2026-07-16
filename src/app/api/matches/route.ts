@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { readDB, updateDB } from "@/lib/db";
 import { recomputeBatch } from "@/lib/hydrate";
 import { findBestNGOMatch } from "@/lib/engines/matching";
+import { getSession, unauthorized } from "@/lib/session";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -17,6 +18,11 @@ export async function GET(req: Request) {
 // each NGO's own acceptance rules. Creates a proposed Match the NGO can
 // still decline from its own feed — this is a proposal, not a push.
 export async function POST(req: Request) {
+  const session = await getSession();
+  if (!session || session.role !== "admin") {
+    return unauthorized("Only Glean dispatch (admin) can propose a match.");
+  }
+
   const body = await req.json();
   const { batchId } = body;
   if (!batchId) {

@@ -79,10 +79,26 @@ export interface ImpactLog {
   avgFreshnessOfDonations: number;
 }
 
+// "admin" is the Glean operator — the only role with access to the
+// cross-cutting dispatch console. Retailer/NGO accounts are each scoped to
+// exactly one retailerId/ngoId and can't see or act on anyone else's.
+export type Role = "admin" | "retailer" | "ngo";
+
+export interface Account {
+  id: string;
+  username: string;
+  passwordHash: string; // "salt:hash" hex, scrypt
+  role: Role;
+  retailerId: string | null; // set only when role === "retailer"
+  ngoId: string | null; // set only when role === "ngo"
+  displayName: string;
+}
+
 export interface DB {
   retailers: Retailer[];
   ngos: NGO[];
   batches: FoodBatch[];
   matches: Match[];
   impactLogs: ImpactLog[];
+  accounts: Account[];
 }

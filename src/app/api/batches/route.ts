@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { readDB, updateDB } from "@/lib/db";
 import { recomputeBatch } from "@/lib/hydrate";
+import { getSession, unauthorized } from "@/lib/session";
 import type { FoodBatch } from "@/lib/types";
 
 export async function GET(req: Request) {
@@ -17,9 +18,14 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const session = await getSession();
+  if (!session || session.role !== "retailer" || !session.retailerId) {
+    return unauthorized("Only a logged-in retailer can list inventory.");
+  }
+
   const body = await req.json();
 
-  const required = ["retailerId", "category", "itemName", "quantity", "unit"];
+  const required = ["category", "itemName", "quantity", "unit"];
   for (const field of required) {
     if (body[field] === undefined || body[field] === null || body[field] === "") {
       return NextResponse.json(
@@ -31,7 +37,7 @@ export async function POST(req: Request) {
 
   const batch: FoodBatch = recomputeBatch({
     id: randomUUID(),
-    retailerId: body.retailerId,
+    retailerId: session.retailerId,
     category: body.category,
     itemName: body.itemName,
     quantity: Number(body.quantity),

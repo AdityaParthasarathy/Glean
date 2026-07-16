@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { updateDB } from "@/lib/db";
 import { buildImpactLogEntry } from "@/lib/engines/impact";
+import { getSession } from "@/lib/session";
 import type { MatchStatus } from "@/lib/types";
 
 const ALLOWED_TRANSITIONS: Record<MatchStatus, MatchStatus[]> = {
@@ -29,16 +30,29 @@ export async function PATCH(
     return NextResponse.json({ error: "Missing status" }, { status: 400 });
   }
 
+  const session = await getSession();
+
   const result = updateDB((db) => {
     const matchIdx = db.matches.findIndex((m) => m.id === id);
-    if (matchIdx === -1) return { error: "Match not found" as const };
+    if (matchIdx === -1) return { error: "Match not found" as const, status: 404 };
 
     const match = db.matches[matchIdx];
     const allowed = ALLOWED_TRANSITIONS[match.status];
     if (!allowed.includes(nextStatus)) {
       return {
         error: `Cannot move match from ${match.status} to ${nextStatus}.`,
+        status: 400,
       };
+    }
+
+    // Matched -> Accepted/Declined is the owning NGO's call; Accepted ->
+    // Picked up -> Delivered is Glean dispatch's job.
+    const isNgoTransition = nextStatus === "Accepted" || nextStatus === "Declined";
+    const authorized = isNgoTransition
+      ? session?.role === "ngo" && session.ngoId === match.ngoId
+      : session?.role === "admin";
+    if (!authorized) {
+      return { error: "Not authorized to make this change.", status: 401 };
     }
 
     const updatedMatch = {
@@ -67,7 +81,7 @@ export async function PATCH(
   });
 
   if ("error" in result) {
-    return NextResponse.json({ error: result.error }, { status: 400 });
+    return NextResponse.json({ error: result.error }, { status: result.status });
   }
   return NextResponse.json(result.match);
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { api } from "@/lib/apiClient";
+import { api, type SessionInfo } from "@/lib/apiClient";
 import type { FoodBatch, FoodCategory, Match, NGO } from "@/lib/types";
 import { CATEGORIES, CATEGORY_LABELS } from "@/lib/format";
 import FreshnessBadge from "@/components/FreshnessBadge";
@@ -12,8 +12,8 @@ interface EnrichedMatch extends Match {
 }
 
 export default function NgoPage() {
-  const [ngos, setNgos] = useState<NGO[]>([]);
-  const [ngoId, setNgoId] = useState("");
+  const [session, setSession] = useState<SessionInfo | null>(null);
+  const [ngo, setNgo] = useState<NGO | null>(null);
   const [matches, setMatches] = useState<EnrichedMatch[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [prefs, setPrefs] = useState<{
@@ -22,8 +22,6 @@ export default function NgoPage() {
     capacityPerDay: number;
   } | null>(null);
   const [savingPrefs, setSavingPrefs] = useState(false);
-
-  const ngo = ngos.find((n) => n.id === ngoId);
 
   const refresh = useCallback(async (id: string) => {
     const [allMatches, allBatches] = await Promise.all([
@@ -38,31 +36,29 @@ export default function NgoPage() {
   }, []);
 
   useEffect(() => {
-    api.getNGOs().then((ns) => {
-      setNgos(ns);
-      if (ns.length > 0) setNgoId(ns[0].id);
-    });
+    api.getMe().then(({ session: s }) => setSession(s));
   }, []);
 
   useEffect(() => {
-    if (!ngoId) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on ngo switch
-    refresh(ngoId);
-    const n = ngos.find((x) => x.id === ngoId);
-    if (n) {
+    if (!session?.ngoId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on session load
+    refresh(session.ngoId);
+    api.getNGO(session.ngoId).then((n) => {
+      setNgo(n);
       setPrefs({
         acceptedCategories: n.acceptedCategories,
         minFreshness: n.minFreshness,
         capacityPerDay: n.capacityPerDay,
       });
-    }
-  }, [ngoId, ngos, refresh]);
+    });
+  }, [session, refresh]);
 
   async function handleAdvance(matchId: string, status: Match["status"]) {
+    if (!session?.ngoId) return;
     setBusyId(matchId);
     try {
       await api.advanceMatch(matchId, status);
-      await refresh(ngoId);
+      await refresh(session.ngoId);
     } finally {
       setBusyId(null);
     }
@@ -73,7 +69,7 @@ export default function NgoPage() {
     setSavingPrefs(true);
     try {
       const updated = await api.updateNGO(ngo.id, prefs);
-      setNgos((ns) => ns.map((n) => (n.id === updated.id ? updated : n)));
+      setNgo(updated);
     } finally {
       setSavingPrefs(false);
     }
@@ -99,25 +95,13 @@ export default function NgoPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">NGO surplus feed</h1>
-          <p className="text-sm text-zinc-500">
-            You choose what to accept — set your own thresholds below. Glean handles pickup and
-            delivery once you accept. Demo data uses fictional NGO names.
-          </p>
-        </div>
-        <select
-          value={ngoId}
-          onChange={(e) => setNgoId(e.target.value)}
-          className="rounded-lg border border-black/10 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900"
-        >
-          {ngos.map((n) => (
-            <option key={n.id} value={n.id}>
-              {n.name}
-            </option>
-          ))}
-        </select>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold">NGO surplus feed</h1>
+        <p className="text-sm text-zinc-500">
+          {ngo ? `Logged in as ${ngo.name}. ` : ""}You choose what to accept — set your own
+          thresholds below. Glean handles pickup and delivery once you accept. Demo data uses
+          fictional NGO names.
+        </p>
       </div>
 
       {prefs && (

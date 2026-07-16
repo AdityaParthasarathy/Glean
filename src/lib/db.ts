@@ -11,6 +11,7 @@ const EMPTY_DB: DB = {
   batches: [],
   matches: [],
   impactLogs: [],
+  accounts: [],
 };
 
 function ensureFile() {

@@ -10,6 +10,14 @@ const now = () => new Date().toISOString();
 const daysAgo = (n) => new Date(Date.now() - n * 86400000).toISOString();
 const daysFromNow = (n) => new Date(Date.now() + n * 86400000).toISOString();
 
+// Mirrors src/lib/auth.ts's hashPassword — duplicated here since this is a
+// plain Node script with no TS loader.
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+  return `${salt}:${hash}`;
+}
+
 const retailers = [
   {
     id: id(),
@@ -68,6 +76,78 @@ const ngos = [
 ];
 
 const [riverside, elm] = retailers;
+const [communityShelter, tablePantry, harborKitchen] = ngos;
+
+// Demo credentials — printed to the console below. Each retailer/NGO
+// account is scoped to exactly one retailerId/ngoId; admin is the Glean
+// operator with access to the cross-cutting dispatch console only.
+const CREDENTIALS = [
+  { username: "glean-admin", password: "glean-admin-demo" },
+  { username: "riverside", password: "riverside-demo" },
+  { username: "elmstreet", password: "elmstreet-demo" },
+  { username: "food-shelter", password: "shelter-demo" },
+  { username: "table-pantry", password: "pantry-demo" },
+  { username: "relief-kitchen", password: "kitchen-demo" },
+];
+const [adminCred, riversideCred, elmCred, shelterCred, pantryCred, kitchenCred] =
+  CREDENTIALS;
+
+const accounts = [
+  {
+    id: id(),
+    username: adminCred.username,
+    passwordHash: hashPassword(adminCred.password),
+    role: "admin",
+    retailerId: null,
+    ngoId: null,
+    displayName: "Glean Admin",
+  },
+  {
+    id: id(),
+    username: riversideCred.username,
+    passwordHash: hashPassword(riversideCred.password),
+    role: "retailer",
+    retailerId: riverside.id,
+    ngoId: null,
+    displayName: riverside.name,
+  },
+  {
+    id: id(),
+    username: elmCred.username,
+    passwordHash: hashPassword(elmCred.password),
+    role: "retailer",
+    retailerId: elm.id,
+    ngoId: null,
+    displayName: elm.name,
+  },
+  {
+    id: id(),
+    username: shelterCred.username,
+    passwordHash: hashPassword(shelterCred.password),
+    role: "ngo",
+    retailerId: null,
+    ngoId: communityShelter.id,
+    displayName: communityShelter.name,
+  },
+  {
+    id: id(),
+    username: pantryCred.username,
+    passwordHash: hashPassword(pantryCred.password),
+    role: "ngo",
+    retailerId: null,
+    ngoId: tablePantry.id,
+    displayName: tablePantry.name,
+  },
+  {
+    id: id(),
+    username: kitchenCred.username,
+    passwordHash: hashPassword(kitchenCred.password),
+    role: "ngo",
+    retailerId: null,
+    ngoId: harborKitchen.id,
+    displayName: harborKitchen.name,
+  },
+];
 
 const batches = [
   {
@@ -158,11 +238,16 @@ const db = {
   batches,
   matches: [],
   impactLogs: [],
+  accounts,
 };
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
 console.log(`Seeded ${DATA_FILE}`);
 console.log(
-  `  ${retailers.length} retailers, ${ngos.length} NGOs, ${batches.length} batches`
+  `  ${retailers.length} retailers, ${ngos.length} NGOs, ${batches.length} batches, ${accounts.length} accounts`
 );
+console.log("\nDemo login credentials:");
+for (const { username, password } of CREDENTIALS) {
+  console.log(`  ${username} / ${password}`);
+}

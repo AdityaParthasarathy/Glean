@@ -16,8 +16,10 @@ export async function GET(
 }
 
 // Consumer-channel action: marks a listed batch as sold at the suggested
-// markdown price and logs impact. NGO-channel deliveries are handled via
-// /api/matches instead, since those go through the match lifecycle.
+// markdown price and logs impact. Intentionally unauthenticated — it's
+// triggered both by a retailer's own "mark sold" button and by the public,
+// no-login Consumer deals page claiming a listed deal. NGO-channel
+// deliveries are handled via /api/matches instead, which is auth-gated.
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
