@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { api, type SessionInfo } from "@/lib/apiClient";
 import type { FoodBatch, FoodCategory, Match, NGO } from "@/lib/types";
 import { CATEGORIES, CATEGORY_LABELS, formatUsd } from "@/lib/format";
@@ -75,13 +76,21 @@ export default function RetailerPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">Retailer dashboard</h1>
-        <p className="text-sm text-zinc-500">
-          {session ? `Logged in as ${session.displayName}. ` : ""}List inventory and see
-          freshness scores and suggested markdowns. Listed items are automatically visible to
-          Glean for NGO matching — you can also sell directly to consumers.
-        </p>
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Retailer dashboard</h1>
+          <p className="text-sm text-zinc-500">
+            {session ? `Logged in as ${session.displayName}. ` : ""}List inventory and see
+            freshness scores and suggested markdowns. Listed items are automatically visible to
+            Glean for NGO matching — you can also sell directly to consumers.
+          </p>
+        </div>
+        <Link
+          href="/retailer/warehouse"
+          className="whitespace-nowrap rounded-lg border border-emerald-600 px-3 py-2 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
+        >
+          Walk the aisle →
+        </Link>
       </div>
 
       <form
