@@ -4,7 +4,10 @@ import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/apiClient";
 import type { FoodBatch, Match, NGO, Retailer } from "@/lib/types";
 import { CATEGORY_LABELS } from "@/lib/format";
+import { usePolling } from "@/lib/usePolling";
 import FreshnessBadge from "@/components/FreshnessBadge";
+
+const POLL_MS = 3000;
 
 interface EnrichedMatch extends Match {
   batch?: FoodBatch;
@@ -37,6 +40,10 @@ export default function GleanOpsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
     refresh().finally(() => setLoading(false));
   }, [refresh]);
+
+  // Picks up new listings from retailers and new NGO decisions without a
+  // manual reload.
+  usePolling(refresh, POLL_MS);
 
   function enrich(m: Match): EnrichedMatch {
     return {

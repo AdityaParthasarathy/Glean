@@ -4,8 +4,11 @@ import { useEffect, useState, useCallback } from "react";
 import { api, type SessionInfo } from "@/lib/apiClient";
 import type { FoodBatch, FoodCategory, Match, NGO } from "@/lib/types";
 import { CATEGORIES, CATEGORY_LABELS } from "@/lib/format";
+import { usePolling } from "@/lib/usePolling";
 import FreshnessBadge from "@/components/FreshnessBadge";
 import StatusStepper from "@/components/StatusStepper";
+
+const POLL_MS = 3000;
 
 interface EnrichedMatch extends Match {
   batch?: FoodBatch;
@@ -52,6 +55,17 @@ export default function NgoPage() {
       });
     });
   }, [session, refresh]);
+
+  // Picks up new dispatches from Glean (e.g. a second laptop) without a
+  // manual reload. Only re-fetches matches, not preferences, so it never
+  // clobbers an in-progress edit to the acceptance-rules form below.
+  usePolling(
+    () => {
+      if (session?.ngoId) refresh(session.ngoId);
+    },
+    POLL_MS,
+    !!session?.ngoId
+  );
 
   async function handleAdvance(matchId: string, status: Match["status"]) {
     if (!session?.ngoId) return;

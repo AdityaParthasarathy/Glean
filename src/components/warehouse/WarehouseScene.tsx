@@ -56,11 +56,17 @@ export default function WarehouseScene({
       camera={{ fov: 70, near: 0.1, far: 60 }}
       onPointerMissed={() => onSelect("")}
     >
-      <color attach="background" args={["#05070a"]} />
-      <fog attach="fog" args={["#05070a", 8, 24]} />
-      <ambientLight intensity={0.35} />
-      <pointLight position={[0, 4, 6]} intensity={30} color="#22d3ee" />
-      <pointLight position={[0, 4, -4]} intensity={20} color="#a855f7" />
+      <color attach="background" args={["#070b12"]} />
+      <fog attach="fog" args={["#070b12", 14, 30]} />
+      {/* Flat stylized fill so the aisle reads clearly regardless of
+          distance — decay={0} skips physically-correct falloff, which at
+          normal intensities left everything past a couple meters pitch
+          black. */}
+      <ambientLight intensity={1.1} />
+      <hemisphereLight args={["#67e8f9", "#0f172a", 1.4]} />
+      <pointLight position={[0, 3.5, 6]} intensity={12} decay={0} color="#22d3ee" />
+      <pointLight position={[0, 3.5, -1]} intensity={10} decay={0} color="#a855f7" />
+      <pointLight position={[0, 3.5, -7]} intensity={10} decay={0} color="#22d3ee" />
 
       <Grid
         position={[0, 0, 0]}

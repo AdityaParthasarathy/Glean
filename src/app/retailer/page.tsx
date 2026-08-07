@@ -5,10 +5,12 @@ import Link from "next/link";
 import { api, type SessionInfo } from "@/lib/apiClient";
 import type { FoodBatch, FoodCategory, Match, NGO } from "@/lib/types";
 import { CATEGORIES, CATEGORY_LABELS, formatUsd } from "@/lib/format";
+import { usePolling } from "@/lib/usePolling";
 import FreshnessBadge from "@/components/FreshnessBadge";
 import StatusStepper from "@/components/StatusStepper";
 
 const EXPIRY_CATEGORIES: FoodCategory[] = ["dairy", "packaged", "frozen"];
+const POLL_MS = 3000;
 
 export default function RetailerPage() {
   const [session, setSession] = useState<SessionInfo | null>(null);
@@ -47,6 +49,16 @@ export default function RetailerPage() {
     setLoading(true);
     refresh(session.retailerId).finally(() => setLoading(false));
   }, [session, refresh]);
+
+  // Picks up status changes made from Glean/NGO sessions (e.g. a second
+  // laptop) without a manual reload.
+  usePolling(
+    () => {
+      if (session?.retailerId) refresh(session.retailerId);
+    },
+    POLL_MS,
+    !!session?.retailerId
+  );
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();

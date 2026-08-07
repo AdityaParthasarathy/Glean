@@ -4,7 +4,10 @@ import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/apiClient";
 import type { FoodBatch, FoodCategory, Retailer } from "@/lib/types";
 import { CATEGORIES, CATEGORY_LABELS, formatUsd } from "@/lib/format";
+import { usePolling } from "@/lib/usePolling";
 import FreshnessBadge from "@/components/FreshnessBadge";
+
+const POLL_MS = 3000;
 
 export default function ConsumerPage() {
   const [batches, setBatches] = useState<FoodBatch[]>([]);
@@ -24,6 +27,8 @@ export default function ConsumerPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
     refresh();
   }, [refresh]);
+
+  usePolling(refresh, POLL_MS);
 
   async function handleClaim(id: string) {
     setBusyId(id);

@@ -44,11 +44,11 @@ export default function Crate({
         <meshStandardMaterial
           color={color}
           emissive={color}
-          emissiveIntensity={selected ? 1.1 : hovered ? 0.8 : 0.5}
+          emissiveIntensity={selected ? 1.6 : hovered ? 1.3 : 1}
           transparent
-          opacity={0.4}
+          opacity={0.6}
         />
-        <Edges color={color} lineWidth={selected ? 3 : 1.5} />
+        <Edges color={color} lineWidth={selected ? 3 : 2} />
       </mesh>
       <Html position={[0, 0.75, 0]} center distanceFactor={8} occlude>
         <div className="pointer-events-none whitespace-nowrap rounded-full border border-white/20 bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">

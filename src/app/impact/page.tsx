@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/apiClient";
 import { formatUsd } from "@/lib/format";
+import { usePolling } from "@/lib/usePolling";
+
+const POLL_MS = 3000;
 
 interface Summary {
   mealsRedirected: number;
@@ -14,9 +17,17 @@ interface Summary {
 export default function ImpactPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
 
-  useEffect(() => {
-    api.getImpact().then((r) => setSummary(r.summary));
+  const refresh = useCallback(async () => {
+    const r = await api.getImpact();
+    setSummary(r.summary);
   }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
+    refresh();
+  }, [refresh]);
+
+  usePolling(refresh, POLL_MS);
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">

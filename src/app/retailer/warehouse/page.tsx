@@ -6,7 +6,10 @@ import Link from "next/link";
 import { api, type SessionInfo } from "@/lib/apiClient";
 import type { FoodBatch } from "@/lib/types";
 import { CATEGORY_LABELS, formatUsd } from "@/lib/format";
+import { usePolling } from "@/lib/usePolling";
 import FreshnessBadge from "@/components/FreshnessBadge";
+
+const POLL_MS = 3000;
 
 const WarehouseScene = dynamic(() => import("@/components/warehouse/WarehouseScene"), {
   ssr: false,
@@ -20,12 +23,14 @@ const WarehouseScene = dynamic(() => import("@/components/warehouse/WarehouseSce
 export default function WarehousePage() {
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [batches, setBatches] = useState<FoodBatch[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async (retailerId: string) => {
     const b = await api.getBatches(retailerId);
     setBatches(b.filter((x) => x.status === "Listed"));
+    setLoaded(true);
   }, []);
 
   useEffect(() => {
@@ -37,6 +42,16 @@ export default function WarehousePage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on session load
     refresh(session.retailerId);
   }, [session, refresh]);
+
+  // Shelves update live as items ship out or age past the safety floor —
+  // from this laptop or another one.
+  usePolling(
+    () => {
+      if (session?.retailerId) refresh(session.retailerId);
+    },
+    POLL_MS,
+    !!session?.retailerId
+  );
 
   const selected = batches.find((b) => b.id === selectedId) ?? null;
 
@@ -69,9 +84,22 @@ export default function WarehousePage() {
         </Link>
         <div className="pointer-events-auto rounded-xl border border-white/20 bg-black/70 px-3 py-2 text-[11px] text-zinc-300 backdrop-blur-sm">
           <p className="font-semibold text-white">Walk the aisle</p>
-          <p>W/S or ↑/↓ — walk · A/D or ←/→ — look · click an item to inspect</p>
+          <p>W/S or ↑/↓ — walk · A/D or ←/→ — turn · click an item to inspect</p>
         </div>
       </div>
+
+      {loaded && batches.length === 0 && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="pointer-events-auto max-w-sm rounded-xl border border-white/20 bg-black/80 p-5 text-center text-white backdrop-blur-sm">
+            <p className="font-semibold">Nothing on the shelves right now</p>
+            <p className="mt-1 text-sm text-zinc-400">
+              Every listed item has either shipped out or aged past the safety floor. Add new
+              inventory from the retailer dashboard, or run <code>npm run seed</code> to reset
+              the demo data.
+            </p>
+          </div>
+        </div>
+      )}
 
       {selected && (
         <div className="pointer-events-auto absolute bottom-4 left-1/2 w-full max-w-md -translate-x-1/2 rounded-xl border border-white/20 bg-zinc-950/90 p-5 text-white backdrop-blur-sm">

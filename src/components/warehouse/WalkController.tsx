@@ -5,8 +5,8 @@ import { useFrame, useThree } from "@react-three/fiber";
 
 const EYE_HEIGHT = 1.6;
 const WALK_SPEED = 6; // units/sec
-const LOOK_SPEED = 1.6; // rad/sec
-const MAX_YAW = 1.1; // ~63 degrees either way — enough to glance at both shelves
+const LOOK_SPEED = 2.2; // rad/sec
+const TWO_PI = Math.PI * 2;
 
 export interface AisleBounds {
   minZ: number;
@@ -22,10 +22,10 @@ const KEY_ALIASES: Record<string, string> = {
 
 /**
  * Minimal keyboard-only first-person controller: W/S (or arrows) walk along
- * the aisle's z-axis, A/D (or left/right) turn to look at either shelf.
- * Deliberately not pointer-lock/mouse-drag based — keyboard events are
- * reliably scriptable for automated verification, and a single aisle
- * doesn't need full 6-degree-of-freedom movement.
+ * the aisle's z-axis, A/D (or left/right) do a free 360° turn. Deliberately
+ * not pointer-lock/mouse-drag based — keyboard events are reliably
+ * scriptable for automated verification, and this is a walking aisle, not
+ * a flight sim, so no vertical look/pitch is needed yet.
  */
 export default function WalkController({ minZ, maxZ }: AisleBounds) {
   const { camera } = useThree();
@@ -53,7 +53,8 @@ export default function WalkController({ minZ, maxZ }: AisleBounds) {
 
     if (k.has("a")) yawRef.current += LOOK_SPEED * delta;
     if (k.has("d")) yawRef.current -= LOOK_SPEED * delta;
-    yawRef.current = Math.min(MAX_YAW, Math.max(-MAX_YAW, yawRef.current));
+    // Free 360° look — normalize so it doesn't drift over a long session.
+    yawRef.current = ((yawRef.current % TWO_PI) + TWO_PI) % TWO_PI;
 
     camera.position.set(0, EYE_HEIGHT, zRef.current);
     camera.rotation.set(0, yawRef.current, 0);
