@@ -5,7 +5,17 @@ import { api } from "@/lib/apiClient";
 import type { FoodBatch, Match, NGO, Retailer } from "@/lib/types";
 import { CATEGORY_LABELS } from "@/lib/format";
 import { usePolling } from "@/lib/usePolling";
+import { useUnseenActivity } from "@/lib/useUnseenActivity";
+import { remainingCapacity } from "@/lib/engines/matching";
 import FreshnessBadge from "@/components/FreshnessBadge";
+import PageHeaderAccent from "@/components/PageHeaderAccent";
+import BatchThumb from "@/components/BatchThumb";
+import ActivityBadge from "@/components/ActivityBadge";
+import {
+  Disclosure,
+  DisclosureTrigger,
+  DisclosureContent,
+} from "@/components/core/disclosure";
 
 const POLL_MS = 3000;
 
@@ -22,6 +32,10 @@ export default function GleanOpsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [dispatchNotice, setDispatchNotice] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const { unseenCount, dismiss: dismissActivity } = useUnseenActivity(
+    matches.map((m) => `${m.id}:${m.status}`)
+  );
 
   const refresh = useCallback(async () => {
     const [b, r, n, m] = await Promise.all([
@@ -66,7 +80,7 @@ export default function GleanOpsPage() {
       } else if ("ngo" in result) {
         setDispatchNotice((d) => ({
           ...d,
-          [batchId]: `Proposed to ${result.ngo.name} (${result.distanceKm} km away)`,
+          [batchId]: `Proposed to ${result.ngo.name} (${result.distanceKm} km away · ${result.remainingCapacity}/${result.ngo.capacityPerDay} capacity left today)`,
         }));
       }
       await refresh();
@@ -91,19 +105,28 @@ export default function GleanOpsPage() {
   const awaitingResponse = matches.filter((m) => m.status === "Matched").map(enrich);
   const arrangingPickup = matches.filter((m) => m.status === "Accepted").map(enrich);
   const inTransit = matches.filter((m) => m.status === "Picked up").map(enrich);
+  // Delivered/Declined matches otherwise vanish from this console entirely
+  // once they leave the active pipeline — this is the only place to see them.
+  const history = matches
+    .filter((m) => m.status === "Delivered" || m.status === "Declined")
+    .map(enrich)
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">Glean dispatch console</h1>
-        <p className="text-sm text-zinc-500">
+    <div className="mx-auto max-w-4xl px-6 py-14">
+      <div className="mb-12">
+        <PageHeaderAccent className="mb-4" />
+        <h1 className="font-serif text-3xl tracking-tight text-ink">Dispatch</h1>
+        <p className="mt-2 max-w-md text-sm leading-relaxed text-ink-soft">
           Glean is the middleman: retailers list stock, Glean matches it to an NGO and owns
           pickup and delivery once the NGO accepts.
         </p>
       </div>
 
+      <ActivityBadge count={unseenCount} onDismiss={dismissActivity} />
+
       {loading ? (
-        <p className="text-sm text-zinc-500">Loading…</p>
+        <p className="text-sm text-ink-faint">Loading…</p>
       ) : (
         <>
           <Section title="Available for transfer">
@@ -113,9 +136,10 @@ export default function GleanOpsPage() {
               availableForTransfer.map((b) => (
                 <MatchRow key={b.id}>
                   <div className="flex items-center gap-3">
+                    <BatchThumb photoUrl={b.photoUrl} category={b.category} size="h-10 w-10" />
                     <div>
-                      <p className="font-medium">{b.itemName}</p>
-                      <p className="text-xs text-zinc-500">
+                      <p className="font-medium text-ink">{b.itemName}</p>
+                      <p className="text-xs text-ink-faint">
                         {retailerName(b.retailerId)} · {b.quantity} {b.unit} ·{" "}
                         {CATEGORY_LABELS[b.category]}
                       </p>
@@ -124,12 +148,12 @@ export default function GleanOpsPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     {dispatchNotice[b.id] && (
-                      <span className="text-xs text-zinc-500">{dispatchNotice[b.id]}</span>
+                      <span className="text-xs text-ink-faint">{dispatchNotice[b.id]}</span>
                     )}
                     <button
                       onClick={() => handleDispatch(b.id)}
                       disabled={busyId === b.id}
-                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                      className="rounded-full bg-accent px-3.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
                     >
                       Dispatch to NGO
                     </button>
@@ -146,8 +170,11 @@ export default function GleanOpsPage() {
               awaitingResponse.map((m) => (
                 <MatchRow key={m.id}>
                   <BatchInfo match={m} retailerName={retailerName} />
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-xs text-ink-faint">
                     Proposed to {m.ngo?.name ?? "NGO"}
+                    {m.ngo && (
+                      <> · {remainingCapacity(m.ngo, matches, batches)}/{m.ngo.capacityPerDay} capacity left today</>
+                    )}
                   </span>
                 </MatchRow>
               ))
@@ -164,7 +191,7 @@ export default function GleanOpsPage() {
                   <button
                     onClick={() => handleAdvance(m.id, "Picked up")}
                     disabled={busyId === m.id}
-                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                    className="rounded-full bg-accent px-3.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
                   >
                     Mark picked up
                   </button>
@@ -183,7 +210,7 @@ export default function GleanOpsPage() {
                   <button
                     onClick={() => handleAdvance(m.id, "Delivered")}
                     disabled={busyId === m.id}
-                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                    className="rounded-full bg-accent px-3.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
                   >
                     Mark delivered
                   </button>
@@ -191,6 +218,50 @@ export default function GleanOpsPage() {
               ))
             )}
           </Section>
+
+          <Disclosure
+            open={historyOpen}
+            onOpenChange={setHistoryOpen}
+            transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
+          >
+            <DisclosureTrigger>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between border-t border-hairline py-3 text-left"
+              >
+                <span className="text-xs font-medium text-ink-faint">
+                  History — delivered &amp; declined ({history.length})
+                </span>
+                <span
+                  className={`text-ink-faint transition-transform ${historyOpen ? "rotate-45" : ""}`}
+                >
+                  +
+                </span>
+              </button>
+            </DisclosureTrigger>
+            <DisclosureContent>
+              <div className="pb-2">
+                {history.length === 0 ? (
+                  <Empty text="Nothing delivered or declined yet." />
+                ) : (
+                  history.map((m) => (
+                    <MatchRow key={m.id}>
+                      <BatchInfo match={m} retailerName={retailerName} />
+                      <span
+                        className={`text-xs font-medium ${
+                          m.status === "Declined" ? "text-status-unsafe" : "text-accent"
+                        }`}
+                      >
+                        {m.status === "Declined"
+                          ? `Declined by ${m.ngo?.name ?? "NGO"}`
+                          : `Delivered to ${m.ngo?.name ?? "NGO"}`}
+                      </span>
+                    </MatchRow>
+                  ))
+                )}
+              </div>
+            </DisclosureContent>
+          </Disclosure>
         </>
       )}
     </div>
@@ -200,19 +271,21 @@ export default function GleanOpsPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-8">
-      <h2 className="mb-3 text-sm font-semibold text-zinc-700 dark:text-zinc-300">{title}</h2>
-      <div className="flex flex-col gap-3">{children}</div>
+      <h2 className="mb-3 text-xs font-medium text-ink-faint">{title}</h2>
+      <div className="divide-y divide-hairline overflow-hidden rounded-2xl border border-hairline bg-surface shadow-sm">
+        {children}
+      </div>
     </div>
   );
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="text-sm text-zinc-500">{text}</p>;
+  return <p className="px-5 py-4 text-sm text-ink-faint">{text}</p>;
 }
 
 function MatchRow({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-black/10 p-4 dark:border-white/10">
+    <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4">
       {children}
     </div>
   );
@@ -226,12 +299,13 @@ function BatchInfo({
   retailerName: (id: string) => string;
 }) {
   const batch = match.batch;
-  if (!batch) return <span className="text-sm text-zinc-500">Batch unavailable</span>;
+  if (!batch) return <span className="text-sm text-ink-faint">Batch unavailable</span>;
   return (
     <div className="flex items-center gap-3">
+      <BatchThumb photoUrl={batch.photoUrl} category={batch.category} size="h-10 w-10" />
       <div>
-        <p className="font-medium">{batch.itemName}</p>
-        <p className="text-xs text-zinc-500">
+        <p className="font-medium text-ink">{batch.itemName}</p>
+        <p className="text-xs text-ink-faint">
           {retailerName(batch.retailerId)} → {match.ngo?.name ?? "NGO"} · {batch.quantity}{" "}
           {batch.unit} · {match.distanceKm} km
         </p>

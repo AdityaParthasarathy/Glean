@@ -34,24 +34,51 @@ export interface MatchResult {
  * never routes food to an NGO that hasn't opted into that category/quality
  * tier. See project spec section 3 ("NGOs choose, they don't just receive").
  */
+// Total *quantity* already matched against each NGO today (active matches
+// only — Declined doesn't count), keyed by ngoId. capacityPerDay is
+// documented as "units/day", so this has to sum each match's batch
+// quantity, not just count matches — a batch of 40 units uses as much
+// capacity as 40 batches of 1 unit would. Match itself only stores
+// batchId, so this needs the batches array to look quantity up.
+export function matchedQuantityByNgo(
+  existingMatches: Match[],
+  batches: FoodBatch[]
+): Map<string, number> {
+  const totals = new Map<string, number>();
+  for (const m of existingMatches) {
+    if (!m.ngoId || m.status === "Declined") continue;
+    const batch = batches.find((b) => b.id === m.batchId);
+    if (!batch) continue;
+    totals.set(m.ngoId, (totals.get(m.ngoId) ?? 0) + batch.quantity);
+  }
+  return totals;
+}
+
+// How many more units this NGO can take today, per its own capacityPerDay
+// preference. Mirrors the accounting findBestNGOMatch uses internally so
+// the number shown in the UI always matches what the engine will actually
+// allow.
+export function remainingCapacity(
+  ngo: NGO,
+  existingMatches: Match[],
+  batches: FoodBatch[]
+): number {
+  const used = matchedQuantityByNgo(existingMatches, batches).get(ngo.id) ?? 0;
+  return Math.max(0, ngo.capacityPerDay - used);
+}
+
 export function findBestNGOMatch(
   batch: FoodBatch,
   retailer: Retailer,
   ngos: NGO[],
-  existingMatches: Match[]
+  existingMatches: Match[],
+  batches: FoodBatch[]
 ): MatchResult {
   if (!batch.isSafe) {
     return { candidate: null, reason: "Below safety floor — compost only, never redistributed." };
   }
 
-  const matchedQtyByNgo = new Map<string, number>();
-  for (const m of existingMatches) {
-    if (!m.ngoId || m.status === "Declined") continue;
-    matchedQtyByNgo.set(
-      m.ngoId,
-      (matchedQtyByNgo.get(m.ngoId) ?? 0) + 1
-    );
-  }
+  const matchedQtyByNgo = matchedQuantityByNgo(existingMatches, batches);
 
   const eligible: MatchCandidate[] = ngos
     .filter((ngo) => ngo.acceptedCategories.includes(batch.category))

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { readDB, updateDB } from "@/lib/db";
 import { recomputeBatch } from "@/lib/hydrate";
-import { findBestNGOMatch } from "@/lib/engines/matching";
+import { findBestNGOMatch, remainingCapacity } from "@/lib/engines/matching";
 import { getSession, unauthorized } from "@/lib/session";
 
 export async function GET(req: Request) {
@@ -47,7 +47,8 @@ export async function POST(req: Request) {
       batch,
       retailer,
       db.ngos,
-      db.matches
+      db.matches,
+      db.batches
     );
 
     if (!matchResult.candidate) {
@@ -66,7 +67,14 @@ export async function POST(req: Request) {
     db.matches.push(match);
     db.batches[batchIdx] = { ...batch, status: "Matched" };
 
-    return { match, ngo: matchResult.candidate.ngo, distanceKm: match.distanceKm };
+    return {
+      match,
+      ngo: matchResult.candidate.ngo,
+      distanceKm: match.distanceKm,
+      // db.matches already includes the match just pushed above, so this
+      // reflects capacity remaining *after* this dispatch.
+      remainingCapacity: remainingCapacity(matchResult.candidate.ngo, db.matches, db.batches),
+    };
   });
 
   if ("error" in result) {

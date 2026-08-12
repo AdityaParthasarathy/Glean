@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import PageHeaderAccent from "@/components/PageHeaderAccent";
 
 const DEMO_ACCOUNTS = [
   { label: "Glean admin (dispatch console)", username: "glean-admin", password: "glean-admin-demo" },
@@ -42,50 +43,54 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-6 py-16">
-      <h1 className="text-2xl font-bold">Log in</h1>
-      <p className="mt-2 text-sm text-zinc-500">
+    <div className="mx-auto max-w-sm px-6 py-24">
+      <PageHeaderAccent className="mb-4" />
+      <h1 className="font-serif text-3xl tracking-tight text-ink">Log in</h1>
+      <p className="mt-3 text-sm leading-relaxed text-ink-soft">
         Each account is scoped to one role — a retailer login only sees its own inventory, an
         NGO login only sees its own matches, and the Glean admin console is separate from both.
       </p>
 
-      <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-zinc-500">Username</label>
+      <form onSubmit={handleSubmit} className="mt-10 flex flex-col gap-6">
+        <label className="block">
+          <span className="text-xs font-medium text-ink-faint">Username</span>
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900"
+            className="mt-1.5 w-full rounded-lg border border-hairline-strong bg-surface px-3.5 py-2.5 text-[15px] text-ink outline-none transition-colors focus:border-accent focus:bg-bg focus:ring-2 focus:ring-accent/30"
             autoComplete="username"
           />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-zinc-500">Password</label>
+        </label>
+        <label className="block">
+          <span className="text-xs font-medium text-ink-faint">Password</span>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900"
+            className="mt-1.5 w-full rounded-lg border border-hairline-strong bg-surface px-3.5 py-2.5 text-[15px] text-ink outline-none transition-colors focus:border-accent focus:bg-bg focus:ring-2 focus:ring-accent/30"
             autoComplete="current-password"
           />
-        </div>
-        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+        </label>
+        {error && <p className="text-sm text-status-unsafe">{error}</p>}
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+          className="mt-2 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
         >
           Log in
         </button>
       </form>
 
-      <div className="mt-10 rounded-xl border border-black/10 p-4 text-xs dark:border-white/10">
-        <p className="mb-2 font-semibold text-zinc-700 dark:text-zinc-300">Demo accounts</p>
-        <ul className="flex flex-col gap-1.5 text-zinc-500">
+      <div className="mt-14 border-t border-hairline pt-6">
+        <p className="mb-3 text-xs font-medium text-ink-faint">Demo accounts</p>
+        <ul className="flex flex-col gap-2 text-xs text-ink-soft">
           {DEMO_ACCOUNTS.map((a) => (
             <li key={a.username}>
-              <span className="text-zinc-700 dark:text-zinc-300">{a.label}:</span>{" "}
-              <code>{a.username}</code> / <code>{a.password}</code>
+              <span className="text-ink">{a.label}</span>
+              {" — "}
+              <code className="text-ink-soft">{a.username}</code>
+              {" / "}
+              <code className="text-ink-soft">{a.password}</code>
             </li>
           ))}
         </ul>

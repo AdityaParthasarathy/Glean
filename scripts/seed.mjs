@@ -232,12 +232,37 @@ const batches = [
   },
 ];
 
+// Trailing 3 weeks of illustrative daily impact — without this the Impact
+// page's trend chart is empty until someone manually triggers sales during
+// a live demo. A gentle noisy ramp (not a suspiciously straight hockey
+// stick) reads as an early pilot gaining traction. Mirrors the real
+// mealsRedirected -> co2eSavedKg relationship from src/lib/engines/impact.ts
+// (2.5kg CO2e per unit) so the numbers stay internally consistent.
+function buildHistoricalImpactLogs() {
+  const logs = [];
+  for (let daysBack = 21; daysBack >= 1; daysBack--) {
+    const progress = (21 - daysBack) / 21;
+    const baseMeals = 12 + progress * 30;
+    const meals = Math.max(4, Math.round(baseMeals + (Math.random() - 0.5) * 14));
+    const revenueShare = 0.3 + Math.random() * 0.3;
+    logs.push({
+      id: id(),
+      date: daysAgo(daysBack),
+      mealsRedirected: meals,
+      co2eSavedKg: Math.round(meals * 2.5 * 10) / 10,
+      revenueRecoveredUsd: Math.round(meals * revenueShare * 3.8 * 100) / 100,
+      avgFreshnessOfDonations: Math.round(48 + Math.random() * 26),
+    });
+  }
+  return logs;
+}
+
 const db = {
   retailers,
   ngos,
   batches,
   matches: [],
-  impactLogs: [],
+  impactLogs: buildHistoricalImpactLogs(),
   accounts,
 };
 
@@ -245,7 +270,7 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
 console.log(`Seeded ${DATA_FILE}`);
 console.log(
-  `  ${retailers.length} retailers, ${ngos.length} NGOs, ${batches.length} batches, ${accounts.length} accounts`
+  `  ${retailers.length} retailers, ${ngos.length} NGOs, ${batches.length} batches, ${accounts.length} accounts, ${db.impactLogs.length} historical impact days`
 );
 console.log("\nDemo login credentials:");
 for (const { username, password } of CREDENTIALS) {

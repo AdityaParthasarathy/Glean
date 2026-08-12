@@ -5,8 +5,8 @@ const STEPS: BatchStatus[] = ["Listed", "Matched", "Picked up", "Delivered"];
 export default function StatusStepper({ status }: { status: BatchStatus }) {
   if (status === "Composted") {
     return (
-      <div className="flex items-center gap-2 text-sm font-medium text-red-600 dark:text-red-400">
-        <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
+      <div className="flex items-center gap-2 text-sm font-medium text-status-unsafe">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-status-unsafe" />
         Below safety floor — composted, not redistributed
       </div>
     );
@@ -20,21 +20,19 @@ export default function StatusStepper({ status }: { status: BatchStatus }) {
         const done = i <= currentIdx;
         return (
           <div key={step} className="flex items-center">
-            <div className="flex flex-col items-center gap-1">
+            <div className="flex flex-col items-center gap-1.5">
               <span
-                className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold ${
+                className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-medium ${
                   done
-                    ? "bg-emerald-500 text-white"
-                    : "bg-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-500"
+                    ? "bg-accent text-bg"
+                    : "border border-hairline-strong text-ink-faint"
                 }`}
               >
                 {i + 1}
               </span>
               <span
                 className={`text-[11px] whitespace-nowrap ${
-                  done
-                    ? "text-zinc-900 dark:text-zinc-100"
-                    : "text-zinc-400 dark:text-zinc-600"
+                  done ? "text-ink" : "text-ink-faint"
                 }`}
               >
                 {step}
@@ -42,11 +40,7 @@ export default function StatusStepper({ status }: { status: BatchStatus }) {
             </div>
             {i < STEPS.length - 1 && (
               <div
-                className={`mx-1 mb-4 h-0.5 w-8 ${
-                  i < currentIdx
-                    ? "bg-emerald-500"
-                    : "bg-zinc-200 dark:bg-zinc-800"
-                }`}
+                className={`mx-1.5 mb-4 h-px w-8 ${i < currentIdx ? "bg-accent" : "bg-hairline"}`}
               />
             )}
           </div>

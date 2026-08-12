@@ -1,12 +1,10 @@
-import { freshnessTone } from "@/lib/format";
+import { freshnessTone, type FreshnessTone } from "@/lib/format";
 
-const TONE_CLASSES: Record<string, string> = {
-  emerald:
-    "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
-  amber: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-  orange:
-    "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300",
-  red: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
+const TONE_DOT: Record<FreshnessTone, string> = {
+  fresh: "bg-status-fresh",
+  mid: "bg-status-mid",
+  low: "bg-status-low",
+  unsafe: "bg-status-unsafe",
 };
 
 export default function FreshnessBadge({
@@ -18,9 +16,8 @@ export default function FreshnessBadge({
 }) {
   const tone = freshnessTone(score, isSafe);
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${TONE_CLASSES[tone]}`}
-    >
+    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-soft">
+      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${TONE_DOT[tone]}`} />
       {isSafe ? `${score}/100 fresh` : "Unsafe — compost"}
     </span>
   );

@@ -1,4 +1,4 @@
-import type { FoodBatch, Match, NGO, Retailer, Role } from "./types";
+import type { FoodBatch, ImpactLog, Match, NGO, Retailer, Role } from "./types";
 
 export interface SessionInfo {
   accountId: string;
@@ -45,6 +45,7 @@ export const api = {
     unit: string;
     unitPrice: number;
     expiryDate?: string | null;
+    photoUrl?: string | null;
   }) =>
     fetch("/api/batches", {
       method: "POST",
@@ -58,6 +59,29 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "sell" }),
     }).then((r) => json<FoodBatch>(r)),
+
+  editBatch: (
+    id: string,
+    input: Partial<{
+      itemName: string;
+      category: string;
+      quantity: number;
+      unit: string;
+      unitPrice: number;
+      expiryDate: string | null;
+      photoUrl: string | null;
+    }>
+  ) =>
+    fetch(`/api/batches/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "edit", ...input }),
+    }).then((r) => json<FoodBatch>(r)),
+
+  deleteBatch: (id: string) =>
+    fetch(`/api/batches/${id}`, { method: "DELETE" }).then((r) =>
+      json<{ removed: true }>(r)
+    ),
 
   getNGOs: () => fetch("/api/ngos").then((r) => json<NGO[]>(r)),
 
@@ -84,9 +108,10 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ batchId }),
     }).then((r) =>
-      json<{ match: Match; ngo: NGO; distanceKm: number } | { candidate: null; reason: string }>(
-        r
-      )
+      json<
+        | { match: Match; ngo: NGO; distanceKm: number; remainingCapacity: number }
+        | { candidate: null; reason: string }
+      >(r)
     ),
 
   advanceMatch: (id: string, status: Match["status"]) =>
@@ -105,7 +130,7 @@ export const api = {
           revenueRecoveredUsd: number;
           avgFreshnessOfDonations: number;
         };
-        logs: unknown[];
+        logs: ImpactLog[];
       }>(r)
     ),
 };
