@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { AnimatedBackground } from "@/components/core/animated-background";
+import { notifyError } from "@/lib/toast";
 
 export interface NavLinkItem {
   href: string;
@@ -28,9 +29,13 @@ export default function NavLinks({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/");
-    router.refresh();
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/");
+      router.refresh();
+    } catch (err) {
+      notifyError(err);
+    }
   }
 
   const children = [

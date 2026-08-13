@@ -6,6 +6,7 @@ import type { FoodBatch, FoodCategory, Match, NGO } from "@/lib/types";
 import { CATEGORIES, CATEGORY_LABELS } from "@/lib/format";
 import { usePolling } from "@/lib/usePolling";
 import { useUnseenActivity } from "@/lib/useUnseenActivity";
+import { notifyError, notifySuccess } from "@/lib/toast";
 import FreshnessBadge from "@/components/FreshnessBadge";
 import StatusStepper from "@/components/StatusStepper";
 import PageHeaderAccent from "@/components/PageHeaderAccent";
@@ -36,6 +37,7 @@ export default function NgoPage() {
   } | null>(null);
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [declinedOpen, setDeclinedOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { unseenCount, dismiss: dismissActivity } = useUnseenActivity(
     matches.map((m) => `${m.id}:${m.status}`)
   );
@@ -59,15 +61,18 @@ export default function NgoPage() {
   useEffect(() => {
     if (!session?.ngoId) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on session load
-    refresh(session.ngoId);
-    api.getNGO(session.ngoId).then((n) => {
-      setNgo(n);
-      setPrefs({
-        acceptedCategories: n.acceptedCategories,
-        minFreshness: n.minFreshness,
-        capacityPerDay: n.capacityPerDay,
-      });
-    });
+    setLoading(true);
+    Promise.all([
+      refresh(session.ngoId),
+      api.getNGO(session.ngoId).then((n) => {
+        setNgo(n);
+        setPrefs({
+          acceptedCategories: n.acceptedCategories,
+          minFreshness: n.minFreshness,
+          capacityPerDay: n.capacityPerDay,
+        });
+      }),
+    ]).finally(() => setLoading(false));
   }, [session, refresh]);
 
   // Picks up new dispatches from Glean (e.g. a second laptop) without a
@@ -87,6 +92,8 @@ export default function NgoPage() {
     try {
       await api.advanceMatch(matchId, status);
       await refresh(session.ngoId);
+    } catch (err) {
+      notifyError(err);
     } finally {
       setBusyId(null);
     }
@@ -98,6 +105,9 @@ export default function NgoPage() {
     try {
       const updated = await api.updateNGO(ngo.id, prefs);
       setNgo(updated);
+      notifySuccess("Preferences saved");
+    } catch (err) {
+      notifyError(err);
     } finally {
       setSavingPrefs(false);
     }
@@ -219,6 +229,10 @@ export default function NgoPage() {
         </Disclosure>
       )}
 
+      {loading ? (
+        <p className="text-sm text-ink-faint">Loading…</p>
+      ) : (
+        <>
       <Section title="Incoming matches — accept or decline">
         {incoming.length === 0 ? (
           <Empty text="No proposed matches right now." />
@@ -321,6 +335,8 @@ export default function NgoPage() {
           </div>
         </DisclosureContent>
       </Disclosure>
+        </>
+      )}
     </div>
   );
 }

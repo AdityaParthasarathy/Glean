@@ -7,6 +7,7 @@ import { CATEGORY_LABELS } from "@/lib/format";
 import { usePolling } from "@/lib/usePolling";
 import { useUnseenActivity } from "@/lib/useUnseenActivity";
 import { remainingCapacity } from "@/lib/engines/matching";
+import { notifyError } from "@/lib/toast";
 import FreshnessBadge from "@/components/FreshnessBadge";
 import PageHeaderAccent from "@/components/PageHeaderAccent";
 import BatchThumb from "@/components/BatchThumb";
@@ -84,6 +85,8 @@ export default function GleanOpsPage() {
         }));
       }
       await refresh();
+    } catch (err) {
+      notifyError(err);
     } finally {
       setBusyId(null);
     }
@@ -94,6 +97,8 @@ export default function GleanOpsPage() {
     try {
       await api.advanceMatch(matchId, status);
       await refresh();
+    } catch (err) {
+      notifyError(err);
     } finally {
       setBusyId(null);
     }

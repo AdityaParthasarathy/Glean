@@ -37,6 +37,8 @@ export default function LoginPage() {
       }
       router.push(data.redirectTo);
       router.refresh();
+    } catch {
+      setError("Couldn't reach the server — check your connection and try again.");
     } finally {
       setSubmitting(false);
     }

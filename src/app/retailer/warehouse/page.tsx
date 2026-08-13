@@ -9,6 +9,7 @@ import { CATEGORY_LABELS, formatUsd } from "@/lib/format";
 import { usePolling } from "@/lib/usePolling";
 import FreshnessBadge from "@/components/FreshnessBadge";
 import { Spotlight } from "@/components/core/spotlight";
+import { notifyError } from "@/lib/toast";
 
 const POLL_MS = 3000;
 
@@ -63,6 +64,8 @@ export default function WarehousePage() {
       await api.sellBatch(selected.id);
       setSelectedId(null);
       await refresh(session.retailerId);
+    } catch (err) {
+      notifyError(err);
     } finally {
       setBusy(false);
     }

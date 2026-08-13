@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { Fraunces } from "next/font/google";
+import { Toaster } from "sonner";
 import Nav from "@/components/Nav";
 import "./globals.css";
 
@@ -34,6 +35,17 @@ export default function RootLayout({
       <body className="flex min-h-full flex-col bg-bg text-ink">
         <Nav />
         <main className="flex-1">{children}</main>
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              background: "var(--color-surface)",
+              color: "var(--color-ink)",
+              border: "1px solid var(--color-hairline-strong)",
+              fontFamily: "var(--font-sans)",
+            },
+          }}
+        />
       </body>
     </html>
   );

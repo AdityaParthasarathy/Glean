@@ -10,6 +10,7 @@ import FreshnessBadge from "@/components/FreshnessBadge";
 import { AnimatedGroup } from "@/components/core/animated-group";
 import PageHeaderAccent from "@/components/PageHeaderAccent";
 import BatchThumb from "@/components/BatchThumb";
+import { notifyError } from "@/lib/toast";
 
 const POLL_MS = 3000;
 
@@ -20,6 +21,7 @@ export default function ConsumerPage() {
   const [retailerFilter, setRetailerFilter] = useState<string>("all");
   const [claimedId, setClaimedId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     const [b, r] = await Promise.all([api.getBatches(), api.getRetailers()]);
@@ -29,7 +31,7 @@ export default function ConsumerPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
-    refresh();
+    refresh().finally(() => setLoading(false));
   }, [refresh]);
 
   usePolling(refresh, POLL_MS);
@@ -40,6 +42,8 @@ export default function ConsumerPage() {
       await api.sellBatch(id);
       setClaimedId(id);
       await refresh();
+    } catch (err) {
+      notifyError(err);
     } finally {
       setBusyId(null);
     }
@@ -90,7 +94,9 @@ export default function ConsumerPage() {
         </select>
       </div>
 
-      {deals.length === 0 ? (
+      {loading ? (
+        <p className="text-sm text-ink-faint">Loading…</p>
+      ) : deals.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-hairline-strong py-16 text-center">
           <SearchX className="h-6 w-6 text-ink-faint" />
           <p className="text-sm text-ink-faint">No deals match those filters right now.</p>

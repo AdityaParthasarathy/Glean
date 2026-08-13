@@ -8,6 +8,7 @@ import type { FoodBatch, FoodCategory, Match, NGO } from "@/lib/types";
 import { CATEGORIES, CATEGORY_LABELS, formatUsd } from "@/lib/format";
 import { usePolling } from "@/lib/usePolling";
 import { useUnseenActivity } from "@/lib/useUnseenActivity";
+import { notifyError } from "@/lib/toast";
 import FreshnessBadge from "@/components/FreshnessBadge";
 import StatusStepper from "@/components/StatusStepper";
 import PageHeaderAccent from "@/components/PageHeaderAccent";
@@ -88,17 +89,21 @@ export default function RetailerPage() {
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!session?.retailerId) return;
-    await api.createBatch({
-      category: form.category,
-      itemName: form.itemName || `${CATEGORY_LABELS[form.category]} batch`,
-      quantity: Number(form.quantity),
-      unit: form.unit,
-      unitPrice: Number(form.unitPrice),
-      expiryDate: form.expiryDate ? new Date(form.expiryDate).toISOString() : null,
-      photoUrl: form.photoUrl || null,
-    });
-    setForm((f) => ({ ...f, itemName: "", photoUrl: "" }));
-    refresh(session.retailerId);
+    try {
+      await api.createBatch({
+        category: form.category,
+        itemName: form.itemName || `${CATEGORY_LABELS[form.category]} batch`,
+        quantity: Number(form.quantity),
+        unit: form.unit,
+        unitPrice: Number(form.unitPrice),
+        expiryDate: form.expiryDate ? new Date(form.expiryDate).toISOString() : null,
+        photoUrl: form.photoUrl || null,
+      });
+      setForm((f) => ({ ...f, itemName: "", photoUrl: "" }));
+      await refresh(session.retailerId);
+    } catch (err) {
+      notifyError(err);
+    }
   }
 
   async function handleSell(batchId: string) {
@@ -107,6 +112,8 @@ export default function RetailerPage() {
     try {
       await api.sellBatch(batchId);
       await refresh(session.retailerId);
+    } catch (err) {
+      notifyError(err);
     } finally {
       setBusyId(null);
     }
@@ -157,9 +164,11 @@ export default function RetailerPage() {
     try {
       await api.deleteBatch(batchId);
       await refresh(session.retailerId);
+      setConfirmRemoveId(null);
+    } catch (err) {
+      notifyError(err);
     } finally {
       setRemoveBusyId(null);
-      setConfirmRemoveId(null);
     }
   }
 
